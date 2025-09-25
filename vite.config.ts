@@ -1,5 +1,5 @@
 
-  import { defineConfig } from 'vite';
+import { defineConfig } from 'vite';
   import react from '@vitejs/plugin-react-swc';
   import path from 'path';
 
@@ -56,5 +56,15 @@
     server: {
       port: 3000,
       open: true,
+      proxy: {
+        '/api': {
+          target: 'https://ark.cn-beijing.volces.com',
+          changeOrigin: true,
+          rewrite: (path) => path.replace(/^\/api/, '/api'),
+          headers: {
+            'Authorization': 'Bearer 15e0756e-78c1-4e4f-ac09-894e377f34c3'
+          }
+        }
+      }
     },
   });

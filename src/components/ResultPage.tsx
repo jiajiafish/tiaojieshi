@@ -4,6 +4,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Badge } from "./ui/badge";
 import { Loader2, Heart, Home } from "lucide-react";
 import { analyzeMediation } from "../services/aiAnalysis";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 
 interface ResultPageProps {
   recordings: { person1: string; person2: string };
@@ -111,8 +113,10 @@ export function ResultPage({ recordings, onHome, onNewMediation }: ResultPagePro
         {/* AI Response Content */}
         <Card className="border-none shadow-lg">
           <CardContent className="p-6">
-            <div className="prose prose-sm max-w-none text-gray-700 whitespace-pre-wrap">
-              {aiResponse}
+            <div className="prose prose-sm max-w-none text-gray-700">
+              <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                {aiResponse}
+              </ReactMarkdown>
             </div>
           </CardContent>
         </Card>

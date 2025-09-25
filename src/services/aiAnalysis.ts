@@ -5,9 +5,10 @@ interface AIAnalysisRequest {
 
 
 
-const API_KEY = '15e0756e-78c1-4e4f-ac09-894e377f34c3';
-const API_URL = 'https://ark.cn-beijing.volces.com/api/v3/chat/completions';
-const MODEL_NAME = 'doubao-seed-1-6-flash-250828';
+// 使用环境变量配置API
+const API_KEY = import.meta.env.VITE_DOUBAO_API_KEY || '15e0756e-78c1-4e4f-ac09-894e377f34c3';
+const API_URL = import.meta.env.VITE_DOUBAO_API_URL || '/api/v3/chat/completions';
+const MODEL_NAME = import.meta.env.VITE_DOUBAO_MODEL_NAME || 'doubao-seed-1-6-flash-250828';
 
 export async function analyzeMediation(request: AIAnalysisRequest): Promise<string> {
   try {

@@ -17,6 +17,14 @@ interface Recording {
   interimTranscript: string;
 }
 
+interface PersonRecording {
+  id: 1 | 2;
+  name: string;
+  color: 'blue' | 'purple';
+  recording: Recording;
+  setRecording: (recording: Recording) => void;
+}
+
 export function RecordingPage({ onComplete, onBack }: RecordingPageProps) {
   const [currentPerson, setCurrentPerson] = useState<1 | 2>(1);
   const [person1Recording, setPerson1Recording] = useState<Recording>({
@@ -36,9 +44,25 @@ export function RecordingPage({ onComplete, onBack }: RecordingPageProps) {
   const [recognition, setRecognition] = useState<SpeechRecognition | null>(null);
   const [isSpeechRecognitionSupported, setIsSpeechRecognitionSupported] = useState(false);
 
-  const getCurrentRecording = () => currentPerson === 1 ? person1Recording : person2Recording;
-  const setCurrentRecording = (recording: Recording) => 
-    currentPerson === 1 ? setPerson1Recording(recording) : setPerson2Recording(recording);
+  // 创建更清晰的人员配置
+  const personConfigs: PersonRecording[] = [
+    {
+      id: 1,
+      name: '第一位',
+      color: 'blue',
+      recording: person1Recording,
+      setRecording: setPerson1Recording
+    },
+    {
+      id: 2,
+      name: '第二位',
+      color: 'purple',
+      recording: person2Recording,
+      setRecording: setPerson2Recording
+    }
+  ];
+
+  const currentPersonConfig = personConfigs.find(p => p.id === currentPerson)!;
 
   // 初始化语音识别
   useEffect(() => {
@@ -64,18 +88,23 @@ export function RecordingPage({ onComplete, onBack }: RecordingPageProps) {
           }
         }
         
-        setCurrentRecording(prev => {
-          // 只添加最终的识别结果，避免重复
-          const newTranscript = finalTranscript ? 
-            (prev.transcript + ' ' + finalTranscript).trim() : 
-            prev.transcript;
-          
-          return {
-            ...prev,
-            transcript: newTranscript,
-            interimTranscript: interimTranscript
-          };
-        });
+        // 获取当前人员配置（解决闭包问题）
+        const currentPersonId = currentPerson;
+        const currentConfig = personConfigs.find(p => p.id === currentPersonId);
+        if (currentConfig) {
+          currentConfig.setRecording(prev => {
+            // 只添加最终的识别结果，避免重复
+            const newTranscript = finalTranscript ? 
+              (prev.transcript + ' ' + finalTranscript).trim() : 
+              prev.transcript;
+            
+            return {
+              ...prev,
+              transcript: newTranscript,
+              interimTranscript: interimTranscript
+            };
+          });
+        }
       };
       
       recognition.onerror = (event: any) => {
@@ -84,11 +113,11 @@ export function RecordingPage({ onComplete, onBack }: RecordingPageProps) {
       
       setRecognition(recognition);
     }
-  }, []);
+  }, [currentPerson]); // 添加currentPerson依赖，确保回调函数获取最新值
 
   const startRecording = () => {
-    const recording = getCurrentRecording();
-    setCurrentRecording({ ...recording, isRecording: true });
+    const { recording, setRecording } = currentPersonConfig;
+    setRecording({ ...recording, isRecording: true });
     
     // 开始语音识别
     if (recognition) {
@@ -97,7 +126,7 @@ export function RecordingPage({ onComplete, onBack }: RecordingPageProps) {
     
     // 模拟录音计时
     const interval = setInterval(() => {
-      setCurrentRecording(prev => {
+      setRecording(prev => {
         if (!prev.isRecording) {
           clearInterval(interval);
           return prev;
@@ -108,7 +137,7 @@ export function RecordingPage({ onComplete, onBack }: RecordingPageProps) {
   };
 
   const stopRecording = () => {
-    const recording = getCurrentRecording();
+    const { recording, setRecording } = currentPersonConfig;
     
     // 停止语音识别
     if (recognition) {
@@ -116,7 +145,7 @@ export function RecordingPage({ onComplete, onBack }: RecordingPageProps) {
     }
     
     // 清理临时转录文本，只保留最终结果
-    setCurrentRecording({ 
+    setRecording({ 
       ...recording, 
       isRecording: false,
       interimTranscript: "",
@@ -125,7 +154,8 @@ export function RecordingPage({ onComplete, onBack }: RecordingPageProps) {
   };
 
   const resetRecording = () => {
-    setCurrentRecording({
+    const { setRecording } = currentPersonConfig;
+    setRecording({
       isRecording: false,
       duration: 0,
       content: "",
@@ -141,6 +171,27 @@ export function RecordingPage({ onComplete, onBack }: RecordingPageProps) {
   };
 
   const canProceed = person1Recording.content && person2Recording.content;
+
+  // 获取颜色相关的样式配置
+  const getColorStyles = (color: 'blue' | 'purple') => {
+    if (color === 'blue') {
+      return {
+        bg: 'bg-blue-50',
+        border: 'border-blue-200',
+        dot: 'bg-blue-500',
+        text: 'text-blue-700',
+        title: 'text-blue-700'
+      };
+    } else {
+      return {
+        bg: 'bg-purple-50',
+        border: 'border-purple-200',
+        dot: 'bg-purple-500',
+        text: 'text-purple-700',
+        title: 'text-purple-700'
+      };
+    }
+  };
 
   const handleComplete = () => {
     onComplete({
@@ -163,46 +214,30 @@ export function RecordingPage({ onComplete, onBack }: RecordingPageProps) {
 
         {/* Person Switch */}
         <div className="flex bg-white rounded-xl p-1 mb-6 shadow-sm">
-          <Button
-            variant={currentPerson === 1 ? "default" : "ghost"}
-            className="flex-1 rounded-lg"
-            onClick={() => setCurrentPerson(1)}
-          >
-            第一位 {person1Recording.content && "✓"}
-          </Button>
-          <Button
-            variant={currentPerson === 2 ? "default" : "ghost"}
-            className="flex-1 rounded-lg"
-            onClick={() => setCurrentPerson(2)}
-          >
-            第二位 {person2Recording.content && "✓"}
-          </Button>
+          {personConfigs.map((person) => (
+            <Button
+              key={person.id}
+              variant={currentPerson === person.id ? "default" : "ghost"}
+              className="flex-1 rounded-lg"
+              onClick={() => setCurrentPerson(person.id)}
+            >
+              {person.name} {person.recording.content && "✓"}
+            </Button>
+          ))}
         </div>
 
         {/* Current Person's Recording Preview */}
-        {currentPerson === 1 && person1Recording.content && (
-          <Card className="mb-6 bg-blue-50 border-blue-200">
+        {currentPersonConfig.recording.content && (
+          <Card className={`mb-6 ${getColorStyles(currentPersonConfig.color).bg} ${getColorStyles(currentPersonConfig.color).border}`}>
             <CardContent className="p-4">
               <div className="flex items-center gap-2 mb-3">
-                <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
-                <h3 className="text-sm font-medium text-blue-700">第一位录音转录</h3>
+                <div className={`w-3 h-3 ${getColorStyles(currentPersonConfig.color).dot} rounded-full`}></div>
+                <h3 className={`text-sm font-medium ${getColorStyles(currentPersonConfig.color).title}`}>
+                  {currentPersonConfig.name}录音转录
+                </h3>
               </div>
               <p className="text-sm text-gray-700 leading-relaxed">
-                {person1Recording.transcript || person1Recording.content}
-              </p>
-            </CardContent>
-          </Card>
-        )}
-
-        {currentPerson === 2 && person2Recording.content && (
-          <Card className="mb-6 bg-purple-50 border-purple-200">
-            <CardContent className="p-4">
-              <div className="flex items-center gap-2 mb-3">
-                <div className="w-3 h-3 bg-purple-500 rounded-full"></div>
-                <h3 className="text-sm font-medium text-purple-700">第二位录音转录</h3>
-              </div>
-              <p className="text-sm text-gray-700 leading-relaxed">
-                {person2Recording.transcript || person2Recording.content}
+                {currentPersonConfig.recording.transcript || currentPersonConfig.recording.content}
               </p>
             </CardContent>
           </Card>
@@ -212,24 +247,24 @@ export function RecordingPage({ onComplete, onBack }: RecordingPageProps) {
         <Card className="mb-6 border-none shadow-lg">
           <CardHeader className="text-center">
             <CardTitle className="flex items-center justify-center gap-2">
-              <div className={`w-3 h-3 rounded-full ${currentPerson === 1 ? 'bg-blue-500' : 'bg-purple-500'}`}></div>
-              {currentPerson === 1 ? '第一位' : '第二位'}的表达时间
+              <div className={`w-3 h-3 rounded-full ${getColorStyles(currentPersonConfig.color).dot}`}></div>
+              {currentPersonConfig.name}的表达时间
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-6">
             {/* Timer Display */}
             <div className="text-center">
               <div className="text-4xl mb-2 font-mono">
-                {formatTime(getCurrentRecording().duration)}
+                {formatTime(currentPersonConfig.recording.duration)}
               </div>
-              <Badge variant={getCurrentRecording().isRecording ? "destructive" : "secondary"}>
-                {getCurrentRecording().isRecording ? "录音中..." : "准备录音"}
+              <Badge variant={currentPersonConfig.recording.isRecording ? "destructive" : "secondary"}>
+                {currentPersonConfig.recording.isRecording ? "录音中..." : "准备录音"}
               </Badge>
             </div>
 
             {/* Recording Controls */}
             <div className="flex justify-center space-x-4">
-              {!getCurrentRecording().isRecording ? (
+              {!currentPersonConfig.recording.isRecording ? (
                 <Button
                   onClick={startRecording}
                   className="bg-red-500 hover:bg-red-600 text-white rounded-full w-16 h-16"
@@ -245,7 +280,7 @@ export function RecordingPage({ onComplete, onBack }: RecordingPageProps) {
                 </Button>
               )}
 
-              {getCurrentRecording().content && (
+              {currentPersonConfig.recording.content && (
                 <Button
                   onClick={resetRecording}
                   variant="outline"
@@ -257,21 +292,21 @@ export function RecordingPage({ onComplete, onBack }: RecordingPageProps) {
             </div>
 
             {/* Recording Status */}
-            {getCurrentRecording().content && (
+            {currentPersonConfig.recording.content && (
               <div className="text-center p-3 bg-green-50 rounded-lg">
                 <p className="text-green-700">✓ 录音完成</p>
-                <p className="text-sm text-green-600">{getCurrentRecording().content}</p>
+                <p className="text-sm text-green-600">{currentPersonConfig.recording.content}</p>
               </div>
             )}
 
             {/* Real-time Transcript */}
-            {getCurrentRecording().isRecording && (getCurrentRecording().transcript || getCurrentRecording().interimTranscript) && (
+            {currentPersonConfig.recording.isRecording && (currentPersonConfig.recording.transcript || currentPersonConfig.recording.interimTranscript) && (
               <div className="bg-blue-50 p-3 rounded-lg border border-blue-200">
                 <p className="text-sm text-blue-700 mb-1">🎤 实时识别:</p>
                 <p className="text-sm text-gray-700">
-                  {getCurrentRecording().transcript}
-                  {getCurrentRecording().interimTranscript && (
-                    <span className="text-blue-500 opacity-70">{getCurrentRecording().interimTranscript}</span>
+                  {currentPersonConfig.recording.transcript}
+                  {currentPersonConfig.recording.interimTranscript && (
+                    <span className="text-blue-500 opacity-70">{currentPersonConfig.recording.interimTranscript}</span>
                   )}
                 </p>
               </div>
