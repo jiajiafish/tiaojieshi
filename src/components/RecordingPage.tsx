@@ -2,7 +2,8 @@ import { useState, useEffect } from "react";
 import { Button } from "./ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Badge } from "./ui/badge";
-import { Mic, MicOff, RotateCcw, ArrowRight } from "lucide-react";
+import { Mic, MicOff, Play, Pause, RotateCcw, ArrowRight } from "lucide-react";
+import { SpeechRecognition } from "../types/speech";
 
 interface RecordingPageProps {
   onComplete: (recordings: { person1: string; person2: string }) => void;
@@ -41,7 +42,7 @@ export function RecordingPage({ onComplete, onBack }: RecordingPageProps) {
     transcript: "",
     interimTranscript: ""
   });
-  const [recognition, setRecognition] = useState<any>(null);
+  const [recognition, setRecognition] = useState<SpeechRecognition | null>(null);
   const [isSpeechRecognitionSupported, setIsSpeechRecognitionSupported] = useState(false);
 
   // 创建更清晰的人员配置
@@ -92,15 +93,17 @@ export function RecordingPage({ onComplete, onBack }: RecordingPageProps) {
         const currentPersonId = currentPerson;
         const currentConfig = personConfigs.find(p => p.id === currentPersonId);
         if (currentConfig) {
-          const currentRecording = currentConfig.recording;
-          const newTranscript = finalTranscript ? 
-            (currentRecording.transcript + ' ' + finalTranscript).trim() : 
-            currentRecording.transcript;
-          
-          currentConfig.setRecording({
-            ...currentRecording,
-            transcript: newTranscript,
-            interimTranscript: interimTranscript
+          currentConfig.setRecording(prev => {
+            // 只添加最终的识别结果，避免重复
+            const newTranscript = finalTranscript ? 
+              (prev.transcript + ' ' + finalTranscript).trim() : 
+              prev.transcript;
+            
+            return {
+              ...prev,
+              transcript: newTranscript,
+              interimTranscript: interimTranscript
+            };
           });
         }
       };
@@ -124,12 +127,13 @@ export function RecordingPage({ onComplete, onBack }: RecordingPageProps) {
     
     // 模拟录音计时
     const interval = setInterval(() => {
-      const currentRecording = currentPersonConfig.recording;
-      if (!currentRecording.isRecording) {
-        clearInterval(interval);
-        return;
-      }
-      setRecording({ ...currentRecording, duration: currentRecording.duration + 1 });
+      setRecording(prev => {
+        if (!prev.isRecording) {
+          clearInterval(interval);
+          return prev;
+        }
+        return { ...prev, duration: prev.duration + 1 };
+      });
     }, 1000);
   };
 
