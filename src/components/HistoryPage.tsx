@@ -134,7 +134,7 @@ export function HistoryPage({ onBack }: HistoryPageProps) {
           <CardContent className="p-0">
             <ScrollArea className="h-96">
               <div className="space-y-4 p-4">
-                {historyRecords.map((record, index) => (
+                {historyRecords.map((record) => (
                   <div key={record.id} className="border rounded-lg p-4 hover:bg-gray-50 transition-colors">
                     <div className="flex items-start justify-between mb-2">
                       <div className="flex items-center gap-2">

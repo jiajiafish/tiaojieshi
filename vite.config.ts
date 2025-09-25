@@ -1,10 +1,14 @@
 
-import { defineConfig } from 'vite';
-  import react from '@vitejs/plugin-react-swc';
-  import path from 'path';
+import { defineConfig, loadEnv } from 'vite';
+import react from '@vitejs/plugin-react-swc';
+import path from 'path';
 
-  export default defineConfig({
-    plugins: [react()],
+  export default defineConfig(({ mode }) => {
+    // 加载环境变量
+    const env = loadEnv(mode, process.cwd(), '');
+    
+    return {
+      plugins: [react()],
     resolve: {
       extensions: ['.js', '.jsx', '.ts', '.tsx', '.json'],
       alias: {
@@ -58,13 +62,13 @@ import { defineConfig } from 'vite';
       open: true,
       proxy: {
         '/api': {
-          target: 'https://ark.cn-beijing.volces.com',
+          target: env.VITE_PROXY_TARGET || 'https://ark.cn-beijing.volces.com',
           changeOrigin: true,
           rewrite: (path) => path.replace(/^\/api/, '/api'),
           headers: {
-            'Authorization': 'Bearer 15e0756e-78c1-4e4f-ac09-894e377f34c3'
+            'Authorization': `Bearer ${env.VITE_DOUBAO_API_KEY || ''}`
           }
         }
       }
     },
-  });
+  }});
